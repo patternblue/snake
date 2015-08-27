@@ -5,3 +5,9 @@
 	float: left;
 	background:#ddf0a8;
 }
+.snake{
+	background: red;
+}
+.rodent{
+	background: gray;
+}
