@@ -10,4 +10,8 @@
 }
 .rodent{
 	background: gray;
+	/*color: green;*/
+}
+.snake .rodent{
+	background: red;
 }

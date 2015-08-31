@@ -5,74 +5,50 @@ right = 39,
 down = 40,
 left = 37;
 
-var total_width = 960;
-var total_height = 600;
-var	columns = 40;
-var	rows = 40;
+var total_width = 900;
+var total_height = 500;
+var	columns = 30;
+var	rows = 30;
 var widthOfSquare = total_width/columns;
 var heightOfSquare = total_height/rows;
 var snakeX = 20;
 var snakeY = 20;
-var rodentX = Math.floor(Math.random()*(columns + 1));
-var rodentY = Math.floor(Math.random()*(rows + 1));
+var rodentX = Math.floor(Math.random()*(columns));
+var	rodentY = Math.floor(Math.random()*(rows));	
 var snakeDirection = 39;
 var outOfBoundsLR = false;
 var outOfBoundsUD = false;
-var runThis = true;
-var runThat = true;
-
-function theMain(){
-	$('#container').append('<table id="playArea"></div>');
-	$playArea = $('#playArea');
-	$playArea.width(total_width);
-
-	var animals = resetGame($playArea, snakeX, snakeY, snakeDirection);
-	var boa = animals[0];
-	var rodent = animals[1];
-
-	var gameLoop = setInterval(function(){
-		boa.moveSnake();
-		$playArea.renderAnimal(boa);
-		outOfBoundsLR = boa.body[0][0] < 0 || boa.body[0][0] > columns;
-		outOfBoundsUD = boa.body[0][1] < 0 || boa.body[0][1] > rows;
-		if(outOfBoundsLR || outOfBoundsUD){
-			outOfBoundsLR = false;
-			outOfBoundsUD = false;
-			animals = resetGame($playArea, snakeX, snakeY, snakeDirection);
-			boa = animals[0];
-			rodent = animals[1];			
-		};
-	}, 100);
-
-	$(document).on('keydown', boa, function(event){ 
-		if(Math.abs(event.which - boa.direction) !== 2){
-			boa.direction = event.which;
-		}
-	});
-
-};
+var score = 0;
 
 /////////functions:
 
-function resetGame(playArea, snakeX, snakeY, direction){
+function resetGame(playArea, snake, rodent){
+	score = 0;
 	playArea.render(rows, columns, widthOfSquare, heightOfSquare);
-	var boa = new Animal(snakeX, snakeY, snakeDirection, "snake");
-	rodentX = Math.floor(Math.random()*(columns + 1));
-	rodentY = Math.floor(Math.random()*(rows + 1));	
-	var rodent = new Animal(rodentX, rodentY, 39, 'rodent');
-	playArea.renderAnimal(boa);
+	snake.body = [[snakeX, snakeY], [snakeX - 1, snakeY], [snakeX - 2, snakeY]];
+	snake.direction = snakeDirection;
+	rodentX = Math.floor(Math.random()*(columns));
+	rodentY = Math.floor(Math.random()*(rows));	
+	rodent.body = [[rodentX, rodentY]];	
+	rodent.direction = 39;
+	playArea.renderAnimal(snake);
 	playArea.renderAnimal(rodent);
-	return [boa, rodent];
 };
 
+// add animal render function to jQuery prototype
 $.prototype.renderAnimal = function(animal){	
-	// console.log(animal.type);
-	this.find('.column').html('').removeClass(animal.type);
-	// console.log(animal.body.length);
-	// console.log(animal.body[0][1]);
+	this.find('.' + animal.type).html('').removeClass(animal.type);
+	// render each body part
 	for (i = 0; i < animal.body.length; i++){
 		$pinPoint = this.find('.row').eq(animal.body[i][1]).find('.column').eq(animal.body[i][0]);
-		$pinPoint.html('O').addClass(animal.type);
+		// add 'head' class to the first body part of animal
+		if (i === 0){
+			$pinPoint.html('O').addClass('head');	
+		}
+		// add animal's class
+		// $pinPoint.html('O')
+		$pinPoint.addClass(animal.type);
+		// $pinPoint.html('O').addClass('snake');
 	};
 };
 
@@ -103,6 +79,7 @@ function Animal(xCoord, yCoord, direction, type){
 	this.direction = direction;
 };
 
+// add a move function to Animal prototype
 Animal.prototype.moveSnake = function(){
 	var head = this.body[0].slice();
 	switch (this.direction){
@@ -122,4 +99,84 @@ Animal.prototype.moveSnake = function(){
 	};
 	this.body.unshift(head);
 	this.body.pop();
+};
+
+function growTail(tail, tailSecondToLast){
+	var oldTail = tail.slice();
+	if (tail[0] === tailSecondToLast[0]){
+		// they are on the same column. now check row
+		if (tail[1] - tailSecondToLast[1] === 1){
+			// tail is below the tailSecondToLast. Add extra block below the tail
+			tail[1]++;
+		}else{
+			tail[1]--;				
+		}
+	}else{
+		// they are on the same row. now check column
+		if (tail[0] - tailSecondToLast[0] === 1){
+			// tail is to the right of the tailSecondToLast. Add extra block to the right of tail
+			tail[0]++;
+		}else{
+			tail[0]--;				
+		}			
+	}
+	tailSecondToLast = oldTail;
+	return tail;
+};
+
+function theMain(){
+	$('#container').append('<table id="playArea"></div>');
+	$playArea = $('#playArea');
+	$playArea.width(total_width);
+
+	var boa = new Animal(snakeX, snakeY, snakeDirection, "snake");
+	var rodent = new Animal(rodentX, rodentY, 39, 'rodent');
+	resetGame($playArea, boa, rodent);
+
+	var gameLoop = setInterval(function(){
+		boa.moveSnake();
+		$playArea.renderAnimal(boa);
+
+		// check if snake is out of bounds
+		outOfBoundsLR = boa.body[0][0] < 0 || boa.body[0][0] >= columns;
+		outOfBoundsUD = boa.body[0][1] < 0 || boa.body[0][1] >= rows;
+		if(outOfBoundsLR || outOfBoundsUD){
+			outOfBoundsLR = false;
+			outOfBoundsUD = false;
+			resetGame($playArea, boa, rodent);		
+		};
+
+		var head = boa.body[0].slice();
+		for (i = 0; i < boa.body.length - 1; i++){
+			if(head[0] === boa.body[i][0] && head[1] === boa.body[i][1] && i !== 0){
+				console.log('ate myself');
+				resetGame($playArea, boa, rodent);			
+			};	
+		};
+		$playArea.find('.snake.rodent.head').removeClass('rodent').trigger('snakeEats');
+	}, 75);
+
+	// listen for arrow up/right/down/left events
+	$(document).on('keydown', boa, function(event){ 
+		if(Math.abs(event.which - boa.direction) !== 2){
+			boa.direction = event.which;
+		}
+	});
+
+	// listen for snakeEats events
+	$playArea.on('snakeEats', function(event){ 
+		score++;
+		console.log(score);
+		
+		var tail = boa.body[boa.body.length - 1].slice();
+		var tailSecondToLast = boa.body[boa.body.length - 2].slice();
+		for(i = 0; i < 3; i++){
+			boa.body.push(growTail(tail, tailSecondToLast));		
+		};
+		rodentX = Math.floor(Math.random()*(columns));
+		rodentY = Math.floor(Math.random()*(rows));	
+		rodent.body = [[rodentX, rodentY]];	
+		$(this).renderAnimal(rodent);
+	});
+
 };
