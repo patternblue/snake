@@ -19,11 +19,14 @@ var snakeDirection = 39;
 var outOfBoundsLR = false;
 var outOfBoundsUD = false;
 var score = 0;
+var highScore = 0;
 
 /////////functions:
 
 function resetGame(playArea, snake, rodent){
 	score = 0;
+	playArea.parent().find('#highScore').html('High Score: ' + highScore);
+	playArea.parent().find('#score').html('Score: ' + score);
 	playArea.render(rows, columns, widthOfSquare, heightOfSquare);
 	snake.body = [[snakeX, snakeY], [snakeX - 1, snakeY], [snakeX - 2, snakeY]];
 	snake.direction = snakeDirection;
@@ -33,23 +36,6 @@ function resetGame(playArea, snake, rodent){
 	rodent.direction = 39;
 	playArea.renderAnimal(snake);
 	playArea.renderAnimal(rodent);
-};
-
-// add animal render function to jQuery prototype
-$.prototype.renderAnimal = function(animal){	
-	this.find('.' + animal.type).html('').removeClass(animal.type);
-	// render each body part
-	for (i = 0; i < animal.body.length; i++){
-		$pinPoint = this.find('.row').eq(animal.body[i][1]).find('.column').eq(animal.body[i][0]);
-		// add 'head' class to the first body part of animal
-		if (i === 0){
-			$pinPoint.html('O').addClass('head');	
-		}
-		// add animal's class
-		// $pinPoint.html('O')
-		$pinPoint.addClass(animal.type);
-		// $pinPoint.html('O').addClass('snake');
-	};
 };
 
 // add a render function to jQuery prototype
@@ -66,6 +52,24 @@ $.fn.render = function(rows, columns, widthOfSquare, heightOfSquare){
 		'width': widthOfSquare,
 		'height': heightOfSquare
 	});
+};
+
+// add animal render function to jQuery prototype
+$.prototype.renderAnimal = function(animal){	
+	this.find('.' + animal.type).html('').removeClass(animal.type).removeClass('head');
+	// render each body part
+	for (i = 0; i < animal.body.length; i++){
+		$pinPoint = this.find('.row').eq(animal.body[i][1]).find('.column').eq(animal.body[i][0]);
+		// add 'head' class to the first body part of animal
+		if (i === 0 && animal.type === "snake"){
+			$pinPoint.html('(O)').addClass('head');	
+		}
+		if(animal.type === 'rodent'){
+			$pinPoint.html('<:3 )~');
+		}
+		// add animal's class
+		$pinPoint.addClass(animal.type);
+	};
 };
 
 // a snake = an array of coordinates (add more pairs to increase his/her body size)
@@ -101,8 +105,31 @@ Animal.prototype.moveSnake = function(){
 	this.body.pop();
 };
 
-function growTail(tail, tailSecondToLast){
-	var oldTail = tail.slice();
+Animal.prototype.isOutOfBounds = function(){
+	var outOfBoundsLR = this.body[0][0] < 0 || this.body[0][0] >= columns;
+	var outOfBoundsUD = this.body[0][1] < 0 || this.body[0][1] >= rows;
+	if(outOfBoundsLR || outOfBoundsUD){
+		return true;
+	}else{
+		return false;
+	};
+};
+
+Animal.prototype.eatsItself = function(){
+	var head = this.body[0].slice();
+	for (i = 0; i < this.body.length - 1; i++){
+		if(head[0] === this.body[i][0] && head[1] === this.body[i][1] && i !== 0){
+			return true;			
+		};	
+	};
+	return false;
+};
+
+Animal.prototype.growTail = function(){
+
+	var tail = this.body[this.body.length - 1].slice();
+	var tailSecondToLast = this.body[this.body.length - 2].slice();
+
 	if (tail[0] === tailSecondToLast[0]){
 		// they are on the same column. now check row
 		if (tail[1] - tailSecondToLast[1] === 1){
@@ -120,39 +147,34 @@ function growTail(tail, tailSecondToLast){
 			tail[0]--;				
 		}			
 	}
-	tailSecondToLast = oldTail;
-	return tail;
+	this.body.push(tail);		
 };
 
 function theMain(){
-	$('#container').append('<table id="playArea"></div>');
+	$('#container').append('<header id="scoreBoard"><ul><li id="highScore">High Score: 0</li><li id="score">Score: 0</li></ul></header><table id="playArea"></table>');
 	$playArea = $('#playArea');
+	$scoreBoard = $('#scoreBoard');
 	$playArea.width(total_width);
-
+	$scoreBoard.width(total_width);
 	var boa = new Animal(snakeX, snakeY, snakeDirection, "snake");
 	var rodent = new Animal(rodentX, rodentY, 39, 'rodent');
 	resetGame($playArea, boa, rodent);
 
 	var gameLoop = setInterval(function(){
 		boa.moveSnake();
+		$playArea.renderAnimal(rodent);
 		$playArea.renderAnimal(boa);
-
 		// check if snake is out of bounds
-		outOfBoundsLR = boa.body[0][0] < 0 || boa.body[0][0] >= columns;
-		outOfBoundsUD = boa.body[0][1] < 0 || boa.body[0][1] >= rows;
-		if(outOfBoundsLR || outOfBoundsUD){
-			outOfBoundsLR = false;
-			outOfBoundsUD = false;
+		if(boa.isOutOfBounds()){
 			resetGame($playArea, boa, rodent);		
 		};
 
-		var head = boa.body[0].slice();
-		for (i = 0; i < boa.body.length - 1; i++){
-			if(head[0] === boa.body[i][0] && head[1] === boa.body[i][1] && i !== 0){
-				console.log('ate myself');
-				resetGame($playArea, boa, rodent);			
-			};	
+		//check if snake bumped into itself
+		if(boa.eatsItself()){
+			resetGame($playArea, boa, rodent);
 		};
+
+		// remove rodent if snake's head is at rodent's position
 		$playArea.find('.snake.rodent.head').removeClass('rodent').trigger('snakeEats');
 	}, 75);
 
@@ -166,12 +188,14 @@ function theMain(){
 	// listen for snakeEats events
 	$playArea.on('snakeEats', function(event){ 
 		score++;
-		console.log(score);
-		
-		var tail = boa.body[boa.body.length - 1].slice();
-		var tailSecondToLast = boa.body[boa.body.length - 2].slice();
-		for(i = 0; i < 3; i++){
-			boa.body.push(growTail(tail, tailSecondToLast));		
+		if(score > highScore){
+			highScore = score;
+		}
+		$scoreBoard.find('#highScore').html('High Score: ' + highScore);
+		$scoreBoard.find('#score').html('Score: ' + score);
+
+		for(i = 0; i < 4; i++){
+			boa.growTail();		
 		};
 		rodentX = Math.floor(Math.random()*(columns));
 		rodentY = Math.floor(Math.random()*(rows));	

@@ -1,17 +1,26 @@
+#scoreBoard{
+	font-size: 26px;
+	text-align: center;
+}
 #playArea{
-	/*background: red;*/
+	background:#ddf0a8;
 }
 .column{
 	float: left;
-	background:#ddf0a8;
 }
 .snake{
 	background: red;
 }
 .rodent{
-	background: gray;
-	/*color: green;*/
+	white-space:nowrap;
+	background: #cccccc;
+	text-align: center;
+	border-radius: 26px;
 }
 .snake .rodent{
 	background: red;
+}
+.head{
+	text-align: center;
+	border-radius: 26px;
 }
