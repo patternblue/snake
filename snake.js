@@ -5,9 +5,9 @@ right = 39,
 down = 40,
 left = 37;
 
-var total_width = 900;
-var total_height = 500;
-var	columns = 30;
+var total_width = 960;
+var total_height = 530;
+var	columns = 50;
 var	rows = 30;
 var widthOfSquare = total_width/columns;
 var heightOfSquare = total_height/rows;
@@ -20,16 +20,20 @@ var outOfBoundsLR = false;
 var outOfBoundsUD = false;
 var score = 0;
 var highScore = 0;
+var speed = 100;
 
 /////////functions:
 
 function resetGame(playArea, snake, rodent){
 	score = 0;
+	speed = 100;
 	playArea.parent().find('#highScore').html('High Score: ' + highScore);
 	playArea.parent().find('#score').html('Score: ' + score);
 	playArea.render(rows, columns, widthOfSquare, heightOfSquare);
-	snake.body = [[snakeX, snakeY], [snakeX - 1, snakeY], [snakeX - 2, snakeY]];
-	snake.direction = snakeDirection;
+	snake.body = [[snakeX, snakeY], [snakeX - 1, snakeY], [snakeX - 2, snakeY], [snakeX - 3, snakeY], [snakeX - 4, snakeY]];
+
+	snake.directions = [snakeDirection];
+	snake.direction = snake.directions[0];
 	rodentX = Math.floor(Math.random()*(columns));
 	rodentY = Math.floor(Math.random()*(rows));	
 	rodent.body = [[rodentX, rodentY]];	
@@ -76,16 +80,24 @@ $.prototype.renderAnimal = function(animal){
 function Animal(xCoord, yCoord, direction, type){
 	this.type = type;
 	if (type === 'snake'){
-		this.body = [[xCoord, yCoord], [xCoord - 1, yCoord], [xCoord - 2, yCoord]];
+		this.body = [[xCoord, yCoord], [xCoord - 1, yCoord], [xCoord - 2, yCoord], [xCoord - 3, yCoord], [xCoord - 4, yCoord]];
 	}else{
 		this.body = [[xCoord, yCoord]];		
 	}
-	this.direction = direction;
+	this.directions = [direction];
+	this.direction = this.directions[0];
 };
 
 // add a move function to Animal prototype
 Animal.prototype.moveSnake = function(){
 	var head = this.body[0].slice();
+
+	// get direction from directions queue
+	if(this.directions.length > 1){
+		this.directions.shift();		
+	}
+	this.direction = this.directions[0]; 
+	
 	switch (this.direction){
 		case up:
 				head[1]--;
@@ -150,6 +162,7 @@ Animal.prototype.growTail = function(){
 	this.body.push(tail);		
 };
 
+// Main function
 function theMain(){
 	$('#container').append('<header id="scoreBoard"><ul><li id="highScore">High Score: 0</li><li id="score">Score: 0</li></ul></header><table id="playArea"></table>');
 	$playArea = $('#playArea');
@@ -160,7 +173,8 @@ function theMain(){
 	var rodent = new Animal(rodentX, rodentY, 39, 'rodent');
 	resetGame($playArea, boa, rodent);
 
-	var gameLoop = setInterval(function(){
+	// Main game loop
+	function gameLoop (){
 		boa.moveSnake();
 		$playArea.renderAnimal(rodent);
 		$playArea.renderAnimal(boa);
@@ -173,28 +187,34 @@ function theMain(){
 		if(boa.eatsItself()){
 			resetGame($playArea, boa, rodent);
 		};
-
 		// remove rodent if snake's head is at rodent's position
 		$playArea.find('.snake.rodent.head').removeClass('rodent').trigger('snakeEats');
-	}, 75);
+		setTimeout(gameLoop, speed);
+	};
+
+	// start game
+	setTimeout(gameLoop, speed);
 
 	// listen for arrow up/right/down/left events
 	$(document).on('keydown', boa, function(event){ 
-		if(Math.abs(event.which - boa.direction) !== 2){
-			boa.direction = event.which;
+		//check if key is opposite direction of the current direction
+		if(Math.abs(event.which - boa.directions[boa.directions.length - 1]) !== 2){
+			// push the direction to the directions queue
+			boa.directions.push(event.which);
 		}
 	});
 
 	// listen for snakeEats events
 	$playArea.on('snakeEats', function(event){ 
 		score++;
+		speed = speed*(4/5);
 		if(score > highScore){
 			highScore = score;
 		}
 		$scoreBoard.find('#highScore').html('High Score: ' + highScore);
 		$scoreBoard.find('#score').html('Score: ' + score);
 
-		for(i = 0; i < 4; i++){
+		for(i = 0; i < 5; i++){
 			boa.growTail();		
 		};
 		rodentX = Math.floor(Math.random()*(columns));

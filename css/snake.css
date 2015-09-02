@@ -16,11 +16,17 @@
 	background: #cccccc;
 	text-align: center;
 	border-radius: 26px;
+	font-size: 12px;
 }
 .snake .rodent{
 	background: red;
 }
 .head{
+	background-image: url("../img/snake-head3.jpg");
+	background-size: 28px 25px;
+	padding: 4px;
+    margin: -4px;
 	text-align: center;
 	border-radius: 26px;
+
 }
